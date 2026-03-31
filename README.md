@@ -4,6 +4,8 @@
 
 A polished, fully responsive **Connect Four** game with a smart AI opponent powered by **Minimax with Alpha-Beta Pruning**. Works great on desktop, laptop, and mobile.
 
+<img src="connect4.png" alt="Mein Bild" width="300">
+
 ---
 
 ## English
