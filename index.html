@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect Four</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── responsive cell size ── */
+:root{
+  --cell:60px;
+  --gap:8px;
+  --pad:8px;
+}
+@media(max-width:520px){
+  :root{
+    --cell:min(60px,calc((100vw - 40px) / 8.1));
+    --gap:max(4px,calc(var(--cell) * 0.12));
+    --pad:max(4px,calc(var(--cell) * 0.12));
+  }
+}
+
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e0;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding:24px 20px 40px;overflow-y:auto}
+
+/* ── SETUP ── */
+#setup{background:#1b2a3b;border-radius:16px;padding:36px 40px;width:370px;
+  max-width:calc(100vw - 40px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+@media(max-width:420px){#setup{padding:24px 18px}}
+.title{text-align:center;font-size:2rem;font-weight:800;margin-bottom:4px}
+.subtitle{text-align:center;color:#7a9bb5;margin-bottom:32px;font-size:.9rem}
+.sec-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  color:#7a9bb5;margin-bottom:8px}
+.opt-row{margin-bottom:22px}
+.btn-group{display:flex;gap:10px}
+.cbtn{flex:1;padding:11px 8px;background:#243447;border:2px solid transparent;
+  border-radius:10px;color:#ccc;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .15s}
+.cbtn:hover{background:#2d3f54}
+.cbtn.active{background:#1e3a5f;border-color:#4a90d9;color:#fff}
+.cbtn.r.active{border-color:#e05252;color:#ff8080}
+.cbtn.y.active{border-color:#d4a017;color:#ffd700}
+/* keyboard focus ring */
+.kfoc{outline:3px solid #4a90d9 !important;outline-offset:3px}
+.depth-inp{width:100%;padding:11px 14px;background:#243447;border:2px solid #243447;
+  border-radius:10px;color:#fff;font-size:1rem;text-align:center;transition:border-color .15s}
+.depth-inp:focus{outline:none;border-color:#4a90d9}
+.depth-hint{font-size:.72rem;color:#4a6a85;margin-top:5px;text-align:center}
+.go-btn{width:100%;padding:14px;margin-top:6px;background:#1a6abf;border:none;
+  border-radius:10px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;transition:background .15s}
+.go-btn:hover{background:#2278d0}
+
+/* ── GAME ── */
+#game{display:none;flex-direction:column;align-items:center;gap:8px}
+#status-bar{display:flex;align-items:center;gap:10px;padding:9px 20px;
+  background:#1b2a3b;border-radius:10px;min-width:180px;justify-content:center}
+@media(max-width:520px){#status-bar{padding:7px 14px;font-size:.85rem}}
+.sstone{width:20px;height:20px;border-radius:50%;flex-shrink:0}
+.sstone.red{background:radial-gradient(circle at 35% 35%,#ff8888,#bb1111)}
+.sstone.yellow{background:radial-gradient(circle at 35% 35%,#ffee88,#cc9900)}
+#arrows{display:flex;gap:var(--gap)}
+.arrow{width:var(--cell);height:18px;display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:transparent;transition:color .1s;user-select:none}
+.arrow.on.red{color:#ff8080}
+.arrow.on.yellow{color:#ffd700}
+#board-wrap{position:relative}
+#board{background:#1a5bc4;padding:var(--pad);border-radius:14px;display:grid;
+  grid-template-columns:repeat(7,var(--cell));
+  grid-template-rows:repeat(6,var(--cell));
+  gap:var(--gap);box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.cell{width:var(--cell);height:var(--cell);border-radius:50%;background:#0d1b2a;
+  cursor:pointer;position:relative;transition:background .12s}
+.cell.hi{background:#172d45}
+.stone{width:100%;height:100%;border-radius:50%;position:absolute;inset:0}
+.stone.red{background:radial-gradient(circle at 35% 35%,#ff8888,#bb1111);
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.25)}
+.stone.yellow{background:radial-gradient(circle at 35% 35%,#ffee88,#cc9900);
+  box-shadow:inset 0 2px 5px rgba(255,255,255,.25)}
+.stone.win{box-shadow:0 0 0 4px #fff,inset 0 2px 5px rgba(255,255,255,.25)}
+/* ghost: explicit size, overrides .stone's inset/width/height */
+.ghost{position:absolute;width:var(--cell);height:var(--cell);
+  right:auto;bottom:auto;border-radius:50%;z-index:10;pointer-events:none}
+.cell.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#hint{color:#3d5a78;font-size:.72rem;text-align:center}
+
+/* ── RESULT AREA ── */
+#result-area{display:none;flex-direction:column;align-items:center;gap:12px;margin-top:4px}
+#result-area.show{display:flex}
+#res-msg{font-size:1.4rem;font-weight:800;text-align:center}
+@media(max-width:520px){#res-msg{font-size:1.2rem}}
+.res-opts{display:flex;gap:12px}
+.res-opt{padding:11px 24px;background:#243447;border:2px solid transparent;border-radius:10px;
+  color:#ccc;font-size:.93rem;font-weight:600;cursor:pointer;transition:all .15s}
+.res-opt:hover{background:#2d3f54;border-color:#4a90d9}
+@media(max-width:400px){.res-opt{padding:10px 16px;font-size:.85rem}}
+
+/* ── MENU ── */
+#menu-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  align-items:center;justify-content:center;z-index:50}
+#menu-ov.open{display:flex}
+.mbox{background:#1b2a3b;border-radius:14px;padding:28px 32px;width:280px;
+  max-width:calc(100vw - 40px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.mtitle{text-align:center;font-size:1.2rem;font-weight:700;margin-bottom:18px}
+.mopt{padding:13px 18px;border-radius:10px;cursor:pointer;font-size:.93rem;
+  font-weight:500;margin-bottom:8px;border:2px solid transparent;
+  transition:all .15s;background:#243447}
+.mopt:hover,.mopt.foc{background:#2d3f54;border-color:#4a90d9}
+.mopt-depth{display:flex;flex-direction:column;gap:8px;cursor:default}
+.mopt-depth .depth-inp{width:100%;padding:8px 12px;font-size:.9rem}
+.mopt-depth .depth-inp[readonly]{opacity:.55;cursor:default}
+.m-hint{text-align:center;color:#3d5a78;font-size:.74rem;margin-top:14px}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="title">Connect Four</div>
+  <div class="subtitle">Player vs Computer</div>
+
+  <div class="opt-row">
+    <div class="sec-label">Your Color</div>
+    <div class="btn-group">
+      <button class="cbtn r active" id="btn-red"    onclick="selColor('red')">&#x1F534; Red</button>
+      <button class="cbtn y"        id="btn-yellow" onclick="selColor('yellow')">&#x1F7E1; Yellow</button>
+    </div>
+  </div>
+
+  <div class="opt-row">
+    <div class="sec-label">Who Goes First?</div>
+    <div class="btn-group">
+      <button class="cbtn active" id="btn-you"  onclick="selStart('player')">You</button>
+      <button class="cbtn"        id="btn-comp" onclick="selStart('computer')">Computer</button>
+    </div>
+  </div>
+
+  <div class="opt-row">
+    <div class="sec-label">Minimax Depth (Difficulty)</div>
+    <input class="depth-inp" id="sd" type="text" value="5"
+           onkeydown="depthKey(event)" oninput="depthSanitize(this)">
+    <div class="depth-hint">Higher = stronger AI, slower &nbsp;|&nbsp; Recommended: 1 – 8</div>
+  </div>
+
+  <button class="go-btn" id="btn-start" onclick="startGame()">Start Game &#x25BA;</button>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div id="status-bar">
+    <div class="sstone" id="sstone"></div>
+    <span id="stxt">Your turn</span>
+  </div>
+  <div id="arrows"></div>
+  <div id="board-wrap">
+    <div id="board"></div>
+  </div>
+  <div id="hint"></div>
+  <div id="result-area">
+    <div id="res-msg"></div>
+    <div class="res-opts">
+      <div class="res-opt" id="ropt0" onclick="restartGame()">Play Again</div>
+      <div class="res-opt" id="ropt1" onclick="goSetup()">Main Menu</div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU OVERLAY -->
+<div id="menu-ov">
+  <div class="mbox">
+    <div class="mtitle">Menu</div>
+    <div class="mopt" id="mo0" onclick="menuAct(0)">&#x21BA;&nbsp; Restart Game</div>
+    <div class="mopt mopt-depth" id="mo1" onclick="menuAct(1)">
+      <span>&#x2699;&nbsp; Minimax Depth</span>
+      <input class="depth-inp" id="md" type="text" readonly tabindex="-1"
+             onkeydown="depthKey(event)" oninput="depthSanitize(this)">
+    </div>
+    <div class="m-hint">&#x2191;&#x2193; navigate &nbsp;|&nbsp; Enter select &nbsp;|&nbsp; Esc close</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const ROWS=6,COLS=7;
+
+// ── game state ──
+let board,playerColor,compColor,playerP,compP,humanFirst,depth;
+let curTurn,selCol,over,busy,menuOpen,mIdx,menuEditMode;
+const MCOUNT=2;
+const CORD=[3,2,4,1,5,0,6];
+
+// ── screen state ──
+let onSetup=true;
+
+// ── setup keyboard focus ──
+// 'sd' = depth input field (index 4)
+const SETUP_IDS=['btn-red','btn-yellow','btn-you','btn-comp','sd','btn-start'];
+const SD_IDX=SETUP_IDS.indexOf('sd');
+let setupIdx=-1;
+let setupEditMode=false;
+
+function updSetupFocus(){
+  SETUP_IDS.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    // Show kfoc on sd only when selected but NOT actively editing
+    el.classList.toggle('kfoc',i===setupIdx&&!(id==='sd'&&setupEditMode));
+  });
+}
+
+// Wire focus/blur on setup depth input so direct clicks also work
+(function(){
+  const inp=document.getElementById('sd');
+  inp.addEventListener('focus',()=>{
+    setupEditMode=true;
+    if(setupIdx!==SD_IDX){setupIdx=SD_IDX;}
+    updSetupFocus();
+  });
+  inp.addEventListener('blur',()=>{
+    setupEditMode=false;
+    depthSanitize(inp);
+    if(!inp.value) inp.value='1';
+    updSetupFocus();
+  });
+})();
+
+function enterSetupEdit(){
+  const inp=document.getElementById('sd');
+  inp.dataset.prev=inp.value;
+  inp.focus(); inp.select();
+  // setupEditMode set by focus listener
+}
+function exitSetupEdit(apply){
+  if(!setupEditMode) return;
+  const inp=document.getElementById('sd');
+  if(!apply){inp.value=inp.dataset.prev||'5';}
+  inp.blur(); // blur listener clears setupEditMode
+}
+
+// ── result keyboard focus ──
+const RES_IDS=['ropt0','ropt1'];
+let resIdx=0;
+function updResFocus(){
+  RES_IDS.forEach((id,i)=>document.getElementById(id).classList.toggle('kfoc',i===resIdx));
+}
+
+// ── setup helpers ──
+let _playerColor='red',_humanFirst=true;
+function selColor(c){
+  _playerColor=c;
+  document.getElementById('btn-red').classList.toggle('active',c==='red');
+  document.getElementById('btn-yellow').classList.toggle('active',c==='yellow');
+}
+function selStart(w){
+  _humanFirst=w==='player';
+  document.getElementById('btn-you').classList.toggle('active',_humanFirst);
+  document.getElementById('btn-comp').classList.toggle('active',!_humanFirst);
+}
+function depthKey(e){
+  const ok=['Backspace','Delete','Tab','Escape','Enter','ArrowLeft','ArrowRight','Home','End'];
+  if(ok.includes(e.key)||e.key>='0'&&e.key<='9') return;
+  e.preventDefault();
+}
+function depthSanitize(inp){
+  inp.value=inp.value.replace(/\D/g,'');
+  if(inp.value.length>1&&inp.value[0]==='0') inp.value=String(parseInt(inp.value,10))||'1';
+}
+function readDepth(id){const v=parseInt(document.getElementById(id).value,10);return isNaN(v)||v<1?1:v;}
+
+// ── start ──
+function startGame(){
+  if(setupEditMode) exitSetupEdit(true);
+  onSetup=false; setupIdx=-1; setupEditMode=false; updSetupFocus();
+  depth=readDepth('sd');
+  playerColor=_playerColor;
+  compColor=playerColor==='red'?'yellow':'red';
+  playerP=playerColor==='red'?1:2;
+  compP=3-playerP;
+  humanFirst=_humanFirst;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('game').style.display='flex';
+  initGame();
+}
+
+function initGame(){
+  board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  selCol=3; over=false; busy=false; menuOpen=false; mIdx=0;
+  curTurn=humanFirst?playerP:compP;
+  document.getElementById('result-area').classList.remove('show');
+  buildBoard(); buildArrows(); syncStatus();
+  // Hint text: keyboard hint on desktop, tap hint on touch
+  const touch=window.matchMedia('(hover:none)').matches;
+  document.getElementById('hint').textContent=touch
+    ?'Tap column to drop'
+    :'← → select  |  Enter drop  |  ↑ menu  |  click';
+  if(!humanFirst) setTimeout(doComp,450);
+}
+
+// ── DOM ──
+function buildBoard(){
+  const el=document.getElementById('board');
+  el.innerHTML='';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const d=document.createElement('div');
+    d.className='cell'; d.dataset.col=c;
+    d.onclick=()=>onCellClick(c);
+    d.onmouseenter=()=>onHover(c);
+    el.appendChild(d);
+  }
+}
+
+function buildArrows(){
+  const el=document.getElementById('arrows');
+  el.innerHTML='';
+  for(let c=0;c<COLS;c++){
+    const d=document.createElement('div');
+    d.id='ar'+c; d.className='arrow'; d.textContent='▼';
+    el.appendChild(d);
+  }
+  refreshArrows();
+}
+
+function refreshArrows(){
+  for(let c=0;c<COLS;c++){
+    const el=document.getElementById('ar'+c);
+    if(!el) return;
+    const on=c===selCol&&!over&&!busy&&curTurn===playerP;
+    el.className='arrow'+(on?' on '+playerColor:'');
+  }
+}
+
+function refreshHighlights(){
+  document.querySelectorAll('#board .cell').forEach(cell=>{
+    const c=+cell.dataset.col;
+    const ok=!over&&!busy&&curTurn===playerP;
+    cell.classList.toggle('hi',ok&&c===selCol);
+  });
+}
+
+function renderStones(winSet=new Set()){
+  const cells=document.querySelectorAll('#board .cell');
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell=cells[r*COLS+c]; if(!cell) continue;
+    cell.innerHTML='';
+    const p=board[r][c];
+    if(p){
+      const s=document.createElement('div');
+      s.className='stone '+(p===1?'red':'yellow');
+      if(winSet.has(r+','+c)) s.classList.add('win');
+      cell.appendChild(s);
+    }
+  }
+}
+
+function syncStatus(){
+  const mine=curTurn===playerP;
+  document.getElementById('sstone').className='sstone '+(mine?playerColor:compColor);
+  document.getElementById('stxt').textContent=
+    busy?'Computer is thinking…':(mine?'Your turn':'Computer is thinking…');
+  refreshArrows(); refreshHighlights();
+}
+
+// ── input ──
+function onCellClick(col){
+  if(over||busy||curTurn!==playerP) return;
+  selCol=col; refreshArrows(); placePlayer(col);
+}
+function onHover(col){
+  if(over||busy||curTurn!==playerP) return;
+  selCol=col; refreshArrows(); refreshHighlights();
+}
+
+// ── keyboard ──
+document.addEventListener('keydown',e=>{
+  if(onSetup){handleSetupKey(e);return;}
+  if(menuOpen){handleMenuKey(e);return;}
+  if(over){handleResKey(e);return;}
+  if(busy||curTurn!==playerP) return;
+  switch(e.key){
+    case'ArrowLeft':  e.preventDefault(); selCol=(selCol-1+COLS)%COLS; refreshArrows(); refreshHighlights(); break;
+    case'ArrowRight': e.preventDefault(); selCol=(selCol+1)%COLS; refreshArrows(); refreshHighlights(); break;
+    case'Enter':case' ': e.preventDefault(); placePlayer(selCol); break;
+    case'ArrowUp': e.preventDefault(); openMenu(); break;
+  }
+});
+
+function handleSetupKey(e){
+  if(setupEditMode){
+    if(e.key==='Enter'){e.preventDefault();exitSetupEdit(true);}
+    else if(e.key==='Escape'){e.preventDefault();exitSetupEdit(false);}
+    // all other keys pass through to input
+    return;
+  }
+  // Don't intercept when depth input is directly focused (via click)
+  if(document.activeElement===document.getElementById('sd')) return;
+
+  switch(e.key){
+    case'ArrowDown':case'ArrowRight':
+      e.preventDefault();
+      setupIdx=setupIdx>=SETUP_IDS.length-1?0:setupIdx+1;
+      updSetupFocus(); break;
+    case'ArrowUp':case'ArrowLeft':
+      e.preventDefault();
+      setupIdx=setupIdx<=0?SETUP_IDS.length-1:setupIdx-1;
+      updSetupFocus(); break;
+    case'Enter':
+      e.preventDefault();
+      if(setupIdx<0) break;
+      if(SETUP_IDS[setupIdx]==='sd') enterSetupEdit();
+      else{document.getElementById(SETUP_IDS[setupIdx]).click();updSetupFocus();}
+      break;
+  }
+}
+
+function handleResKey(e){
+  switch(e.key){
+    case'ArrowLeft':case'ArrowUp':
+      e.preventDefault(); resIdx=(resIdx-1+RES_IDS.length)%RES_IDS.length; updResFocus(); break;
+    case'ArrowRight':case'ArrowDown':
+      e.preventDefault(); resIdx=(resIdx+1)%RES_IDS.length; updResFocus(); break;
+    case'Enter':
+      e.preventDefault(); document.getElementById(RES_IDS[resIdx]).click(); break;
+  }
+}
+
+// ── player move ──
+function placePlayer(col){
+  const row=freeRow(board,col);
+  if(row===-1){shakeCol(col);return;}
+  board[row][col]=playerP;
+  animDrop(row,col,playerP,()=>{
+    if(!checkEnd(row,col)){curTurn=compP;syncStatus();setTimeout(doComp,250);}
+  });
+}
+
+function shakeCol(col){
+  const cells=document.querySelectorAll('#board .cell');
+  for(let r=0;r<ROWS;r++){
+    const cell=cells[r*COLS+col];
+    cell.classList.remove('shake'); void cell.offsetWidth;
+    cell.classList.add('shake');
+    cell.addEventListener('animationend',()=>cell.classList.remove('shake'),{once:true});
+  }
+}
+
+// ── computer move ──
+function doComp(){
+  if(over) return;
+  busy=true; syncStatus();
+  setTimeout(()=>{
+    const col=bestMove(),row=freeRow(board,col);
+    board[row][col]=compP;
+    animDrop(row,col,compP,()=>{
+      busy=false;
+      if(!checkEnd(row,col)){curTurn=playerP;syncStatus();}
+    });
+  },10);
+}
+
+// ── animation (DOM-based positioning → works for any cell size) ──
+function animDrop(row,col,piece,cb){
+  busy=true;
+  board[row][col]=0; renderStones(); board[row][col]=piece;
+  const wrap=document.getElementById('board-wrap');
+  const wR=wrap.getBoundingClientRect();
+  const cells=document.querySelectorAll('#board .cell');
+  const tR=cells[row*COLS+col].getBoundingClientRect();
+  const x=tR.left-wR.left;
+  const endY=tR.top-wR.top;
+  const startY=-(tR.height+16);
+  const ghost=document.createElement('div');
+  ghost.className='ghost stone '+(piece===1?'red':'yellow');
+  ghost.style.cssText=`left:${x}px;top:${startY}px`;
+  wrap.appendChild(ghost);
+  const dur=(0.07+row*0.045).toFixed(3);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    ghost.style.transition=`top ${dur}s cubic-bezier(0.2,0.85,0.4,1)`;
+    ghost.style.top=endY+'px';
+  }));
+  ghost.addEventListener('transitionend',()=>{
+    ghost.remove(); busy=false; renderStones(); if(cb)cb();
+  },{once:true});
+}
+
+// ── free row ──
+function freeRow(b,col){
+  for(let r=ROWS-1;r>=0;r--) if(b[r][col]===0) return r;
+  return -1;
+}
+
+// ── win / draw ──
+function checkEnd(row,col){
+  const w=findWinner(board);
+  if(w){
+    over=true;
+    const ws=new Set(w.cells.map(([r,c])=>r+','+c));
+    renderStones(ws); refreshArrows();
+    const pw=w.piece===playerP;
+    showResult(pw?'🎉 You Win!':'🤖 Computer Wins!',pw?'#4a90d9':'#e05252');
+    return true;
+  }
+  if(board[0].every(v=>v!==0)){
+    over=true; renderStones(); refreshArrows();
+    showResult("🤝 It's a Draw!",'#7a9bb5');
+    return true;
+  }
+  return false;
+}
+
+function findWinner(b){
+  const dirs=[[0,1],[1,0],[1,1],[1,-1]];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const p=b[r][c]; if(!p) continue;
+    for(const[dr,dc]of dirs){
+      const cells=[[r,c]];
+      for(let i=1;i<4;i++){
+        const nr=r+dr*i,nc=c+dc*i;
+        if(nr<0||nr>=ROWS||nc<0||nc>=COLS||b[nr][nc]!==p) break;
+        cells.push([nr,nc]);
+      }
+      if(cells.length===4) return{piece:p,cells};
+    }
+  }
+  return null;
+}
+
+// ── result ──
+function showResult(msg,color){
+  const el=document.getElementById('res-msg');
+  el.textContent=msg; el.style.color=color;
+  document.getElementById('result-area').classList.add('show');
+  resIdx=0; updResFocus();
+}
+function restartGame(){
+  document.getElementById('result-area').classList.remove('show');
+  initGame();
+}
+function goSetup(){
+  document.getElementById('result-area').classList.remove('show');
+  document.getElementById('game').style.display='none';
+  document.getElementById('setup').style.display='block';
+  document.getElementById('sd').value=depth;
+  selColor(playerColor); selStart(humanFirst?'player':'computer');
+  onSetup=true; setupIdx=-1; setupEditMode=false; updSetupFocus();
+}
+
+// ── menu ──
+function openMenu(){
+  menuOpen=true; mIdx=0; menuEditMode=false;
+  document.getElementById('md').value=depth;
+  document.getElementById('md').setAttribute('readonly','');
+  document.getElementById('menu-ov').classList.add('open');
+  updMenuFocus();
+}
+function closeMenu(){
+  if(menuEditMode) exitMenuEdit(false);
+  menuOpen=false;
+  document.getElementById('menu-ov').classList.remove('open');
+}
+function updMenuFocus(){
+  document.getElementById('mo0').classList.toggle('foc',mIdx===0);
+  document.getElementById('mo1').classList.toggle('foc',mIdx===1&&!menuEditMode);
+}
+function menuAct(idx){
+  mIdx=idx; updMenuFocus();
+  if(idx===0){closeMenu();restartGame();}
+  else if(idx===1) enterMenuEdit();
+}
+function enterMenuEdit(){
+  menuEditMode=true;
+  const inp=document.getElementById('md');
+  inp.removeAttribute('readonly');
+  inp.focus(); inp.select();
+  updMenuFocus();
+}
+function exitMenuEdit(apply){
+  if(!menuEditMode) return;
+  menuEditMode=false;
+  const inp=document.getElementById('md');
+  inp.setAttribute('readonly','');
+  if(apply) depth=readDepth('md');
+  else inp.value=depth;
+  inp.blur(); updMenuFocus();
+}
+function handleMenuKey(e){
+  if(menuEditMode){
+    if(e.key==='Enter'){e.preventDefault();exitMenuEdit(true);}
+    else if(e.key==='Escape'){e.preventDefault();exitMenuEdit(false);}
+    return;
+  }
+  if(e.key==='Escape'){closeMenu();return;}
+  if(e.key==='ArrowUp'){e.preventDefault();mIdx=(mIdx-1+MCOUNT)%MCOUNT;updMenuFocus();}
+  else if(e.key==='ArrowDown'){e.preventDefault();mIdx=(mIdx+1)%MCOUNT;updMenuFocus();}
+  else if(e.key==='Enter'){e.preventDefault();menuAct(mIdx);}
+}
+
+// ── minimax ──
+function bestMove(){
+  for(const c of CORD){const r=freeRow(board,c);if(r===-1)continue;board[r][c]=compP;const w=findWinner(board)!==null;board[r][c]=0;if(w)return c;}
+  for(const c of CORD){const r=freeRow(board,c);if(r===-1)continue;board[r][c]=playerP;const w=findWinner(board)!==null;board[r][c]=0;if(w)return c;}
+  let best=-Infinity,bestC=CORD.find(c=>freeRow(board,c)!==-1);
+  for(const c of CORD){
+    const r=freeRow(board,c);if(r===-1)continue;
+    board[r][c]=compP;
+    const s=minimax(board,depth-1,-Infinity,Infinity,false);
+    board[r][c]=0;
+    if(s>best){best=s;bestC=c;}
+  }
+  return bestC;
+}
+function minimax(b,d,alpha,beta,maxing){
+  const w=findWinner(b);
+  if(w) return w.piece===compP?(100000+d):(-(100000+d));
+  if(b[0].every(v=>v!==0)) return 0;
+  if(d===0) return evalBoard(b);
+  if(maxing){
+    let best=-Infinity;
+    for(const c of CORD){const r=freeRow(b,c);if(r===-1)continue;b[r][c]=compP;best=Math.max(best,minimax(b,d-1,alpha,beta,false));b[r][c]=0;alpha=Math.max(alpha,best);if(alpha>=beta)break;}
+    return best;
+  }else{
+    let best=Infinity;
+    for(const c of CORD){const r=freeRow(b,c);if(r===-1)continue;b[r][c]=playerP;best=Math.min(best,minimax(b,d-1,alpha,beta,true));b[r][c]=0;beta=Math.min(beta,best);if(alpha>=beta)break;}
+    return best;
+  }
+}
+function evalBoard(b){
+  let s=0;
+  for(let r=0;r<ROWS;r++){
+    if(b[r][3]===compP)s+=3;else if(b[r][3]===playerP)s-=3;
+    if(b[r][2]===compP||b[r][4]===compP)s+=1;else if(b[r][2]===playerP||b[r][4]===playerP)s-=1;
+  }
+  for(let r=0;r<ROWS;r++) for(let c=0;c<=COLS-4;c++) s+=scoreW(b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]);
+  for(let c=0;c<COLS;c++) for(let r=0;r<=ROWS-4;r++) s+=scoreW(b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]);
+  for(let r=0;r<=ROWS-4;r++) for(let c=0;c<=COLS-4;c++) s+=scoreW(b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]);
+  for(let r=0;r<=ROWS-4;r++) for(let c=3;c<COLS;c++) s+=scoreW(b[r][c],b[r+1][c-1],b[r+2][c-2],b[r+3][c-3]);
+  return s;
+}
+function scoreW(a,b,c,d){
+  const w=[a,b,c,d];
+  const cp=w.filter(x=>x===compP).length,pp=w.filter(x=>x===playerP).length,em=w.filter(x=>x===0).length;
+  if(cp===4)return 100;if(cp===3&&em===1)return 5;if(cp===2&&em===2)return 2;
+  if(pp===4)return-100;if(pp===3&&em===1)return-4;if(pp===2&&em===2)return-2;
+  return 0;
+}
+</script>
+</body>
+</html>
