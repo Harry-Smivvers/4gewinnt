@@ -238,8 +238,4 @@ xdg-open connect-four.html  # Linux
 
 Oder einfach die [HTML-Datei herunterladen](connect-four.html) und per Doppelklick öffnen.
 
----
 
-## License / Lizenz
-
-MIT — free to use, modify, and share.
