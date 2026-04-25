@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Connect Four / Vier gewinnt</title>
+<title>4 gewinnt</title>
+<link rel="icon" href="4gwinntIcon.png">
+<link rel="apple-touch-icon" href="4gwinntIcon.png">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -29,7 +31,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 #setup{background:#1b2a3b;border-radius:16px;padding:36px 40px;width:370px;
   max-width:calc(100vw - 40px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 @media(max-width:420px){#setup{padding:24px 18px}}
-.title{text-align:center;font-size:2rem;font-weight:800;margin-bottom:4px}
+.splash{width:100%;border-radius:12px;display:block;margin-bottom:16px}
+.title{text-align:center;font-size:1.4rem;font-weight:800;margin-bottom:4px}
 .subtitle{text-align:center;color:#7a9bb5;margin-bottom:32px;font-size:.9rem}
 .sec-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
   color:#7a9bb5;margin-bottom:8px}
@@ -59,11 +62,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 .sstone{width:20px;height:20px;border-radius:50%;flex-shrink:0}
 .sstone.red{background:radial-gradient(circle at 35% 35%,#ff8888,#bb1111)}
 .sstone.yellow{background:radial-gradient(circle at 35% 35%,#ffee88,#cc9900)}
-#arrows{display:flex;gap:var(--gap)}
-.arrow{width:var(--cell);height:18px;display:flex;align-items:center;justify-content:center;
-  font-size:12px;color:transparent;transition:color .1s;user-select:none}
-.arrow.on.red{color:#ff8080}
-.arrow.on.yellow{color:#ffd700}
+#gnome-wrap{position:relative;width:calc(7*var(--cell) + 6*var(--gap) + 2*var(--pad));height:calc(var(--cell)*0.9);overflow:visible}
+#gnome{position:absolute;bottom:0;width:calc(var(--cell)*0.75);pointer-events:none;user-select:none}
+#gnome-img{width:100%;height:auto;display:block;-webkit-user-drag:none;position:relative;z-index:3}
+#gnome-stone{position:absolute;width:var(--cell);height:var(--cell);border-radius:50%;bottom:28%;left:calc(var(--cell)*-0.4);z-index:2}
+#gnome-stone.red{background:radial-gradient(circle at 35% 35%,#ff8888,#bb1111);box-shadow:inset 0 2px 5px rgba(255,255,255,.25)}
+#gnome-stone.yellow{background:radial-gradient(circle at 35% 35%,#ffee88,#cc9900);box-shadow:inset 0 2px 5px rgba(255,255,255,.25)}
 #board-wrap{position:relative}
 #board{background:#1a5bc4;padding:var(--pad);border-radius:14px;display:grid;
   grid-template-columns:repeat(7,var(--cell));
@@ -85,12 +89,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 #hint{color:#3d5a78;font-size:.72rem;text-align:center}
 
+/* ── MENU BUTTON ── */
+#goto-menu-btn{position:fixed;top:14px;left:14px;padding:8px 16px;background:#243447;border:none;
+  border-radius:8px;color:#ccc;font-size:.85rem;font-weight:600;cursor:pointer;z-index:40;transition:all .15s}
+#goto-menu-btn:hover{background:#2d3f54;color:#fff}
+
 /* ── RESULT AREA ── */
-#result-area{display:none;flex-direction:column;align-items:center;gap:12px;margin-top:4px}
+#result-area{display:none;flex-direction:row;align-items:center;justify-content:center;gap:16px}
 #result-area.show{display:flex}
 #res-msg{font-size:1.4rem;font-weight:800;text-align:center}
 @media(max-width:520px){#res-msg{font-size:1.2rem}}
-.res-opts{display:flex;gap:12px}
 .res-opt{padding:11px 24px;background:#243447;border:2px solid transparent;border-radius:10px;
   color:#ccc;font-size:.93rem;font-weight:600;cursor:pointer;transition:all .15s}
 .res-opt:hover{background:#2d3f54;border-color:#4a90d9}
@@ -117,7 +125,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 
 <!-- SETUP -->
 <div id="setup">
-  <div class="title">Connect Four</div>
+  <img class="splash" src="4gwinntSplash.png" alt="">
+  <div class="title">4 gewinnt</div>
   <div class="subtitle">Player vs Computer</div>
 
   <div class="opt-row">
@@ -148,22 +157,20 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 
 <!-- GAME -->
 <div id="game">
+  <button id="goto-menu-btn" onclick="goSetup()">Restart</button>
   <div id="status-bar">
     <div class="sstone" id="sstone"></div>
     <span id="stxt">Your turn</span>
   </div>
-  <div id="arrows"></div>
+  <div id="gnome-wrap"><div id="gnome"><div id="gnome-stone"></div><img id="gnome-img" src="zwerg.png" alt=""></div></div>
+  <div id="result-area">
+    <div id="res-msg"></div>
+    <div class="res-opt" id="ropt0" onclick="restartGame()">Play Again</div>
+  </div>
   <div id="board-wrap">
     <div id="board"></div>
   </div>
   <div id="hint"></div>
-  <div id="result-area">
-    <div id="res-msg"></div>
-    <div class="res-opts">
-      <div class="res-opt" id="ropt0" onclick="restartGame()">Play Again</div>
-      <div class="res-opt" id="ropt1" onclick="goSetup()">Main Menu</div>
-    </div>
-  </div>
 </div>
 
 <!-- MENU OVERLAY -->
@@ -186,7 +193,7 @@ const ROWS=6,COLS=7;
 
 // ── game state ──
 let board,playerColor,compColor,playerP,compP,humanFirst,depth;
-let curTurn,selCol,over,busy,menuOpen,mIdx,menuEditMode;
+let curTurn,selCol,over,busy,menuOpen,mIdx,menuEditMode,gnomePos;
 const MCOUNT=2;
 const CORD=[3,2,4,1,5,0,6];
 
@@ -238,7 +245,7 @@ function exitSetupEdit(apply){
 }
 
 // ── result keyboard focus ──
-const RES_IDS=['ropt0','ropt1'];
+const RES_IDS=['ropt0'];
 let resIdx=0;
 function updResFocus(){
   RES_IDS.forEach((id,i)=>document.getElementById(id).classList.toggle('kfoc',i===resIdx));
@@ -287,7 +294,8 @@ function initGame(){
   selCol=3; over=false; busy=false; menuOpen=false; mIdx=0;
   curTurn=humanFirst?playerP:compP;
   document.getElementById('result-area').classList.remove('show');
-  buildBoard(); buildArrows(); syncStatus();
+  document.getElementById('gnome-wrap').style.display='';
+  buildBoard(); initGnome(); syncStatus();
   // Hint text: keyboard hint on desktop, tap hint on touch
   const touch=window.matchMedia('(hover:none)').matches;
   document.getElementById('hint').textContent=touch
@@ -309,24 +317,46 @@ function buildBoard(){
   }
 }
 
-function buildArrows(){
-  const el=document.getElementById('arrows');
-  el.innerHTML='';
-  for(let c=0;c<COLS;c++){
-    const d=document.createElement('div');
-    d.id='ar'+c; d.className='arrow'; d.textContent='▼';
-    el.appendChild(d);
+function gnomeTo(col,animate,cb){
+  const el=document.getElementById('gnome');
+  if(!el){if(cb)cb();return;}
+  const st=getComputedStyle(document.documentElement);
+  const cell=parseFloat(st.getPropertyValue('--cell'));
+  const gap=parseFloat(st.getPropertyValue('--gap'));
+  const pad=parseFloat(st.getPropertyValue('--pad'));
+  const x=pad+col*(cell+gap)+cell/2;
+  const hw=cell*0.75/2;
+  const newLeft=x-hw;
+  const oldLeft=parseFloat(el.style.left)||0;
+  const dx=newLeft-oldLeft;
+  if(dx>1) el.style.transform='scaleX(1)';
+  else if(dx<-1) el.style.transform='scaleX(-1)';
+  gnomePos=col;
+  if(animate&&Math.abs(dx)>2){
+    const dur=Math.max(0.08,Math.abs(dx)/(cell+gap)*0.13);
+    el.style.transition=`left ${dur.toFixed(3)}s linear`;
+    el.style.left=newLeft+'px';
+    if(cb) el.addEventListener('transitionend',cb,{once:true});
+  }else{
+    el.style.transition='none';
+    el.style.left=newLeft+'px';
+    if(cb) setTimeout(cb,0);
   }
-  refreshArrows();
 }
-
-function refreshArrows(){
-  for(let c=0;c<COLS;c++){
-    const el=document.getElementById('ar'+c);
-    if(!el) return;
-    const on=c===selCol&&!over&&!busy&&curTurn===playerP;
-    el.className='arrow'+(on?' on '+playerColor:'');
-  }
+function gnomeStone(color){
+  document.getElementById('gnome-stone').className=color||'';
+}
+function initGnome(){
+  gnomePos=3;
+  const el=document.getElementById('gnome');
+  el.style.transition='none';
+  const st=getComputedStyle(document.documentElement);
+  const cell=parseFloat(st.getPropertyValue('--cell'));
+  const gap=parseFloat(st.getPropertyValue('--gap'));
+  const pad=parseFloat(st.getPropertyValue('--pad'));
+  el.style.left=(pad+3*(cell+gap)+cell/2-cell*0.75/2)+'px';
+  document.getElementById('gnome').style.transform='scaleX(1)';
+  gnomeStone(curTurn===playerP?playerColor:compColor);
 }
 
 function refreshHighlights(){
@@ -357,17 +387,17 @@ function syncStatus(){
   document.getElementById('sstone').className='sstone '+(mine?playerColor:compColor);
   document.getElementById('stxt').textContent=
     busy?'Computer is thinking…':(mine?'Your turn':'Computer is thinking…');
-  refreshArrows(); refreshHighlights();
+  refreshHighlights();
 }
 
 // ── input ──
 function onCellClick(col){
   if(over||busy||curTurn!==playerP) return;
-  selCol=col; refreshArrows(); placePlayer(col);
+  selCol=col; gnomeTo(col,true,null); placePlayer(col);
 }
 function onHover(col){
   if(over||busy||curTurn!==playerP) return;
-  selCol=col; refreshArrows(); refreshHighlights();
+  selCol=col; gnomeTo(col,true,null); refreshHighlights();
 }
 
 // ── keyboard ──
@@ -377,8 +407,8 @@ document.addEventListener('keydown',e=>{
   if(over){handleResKey(e);return;}
   if(busy||curTurn!==playerP) return;
   switch(e.key){
-    case'ArrowLeft':  e.preventDefault(); selCol=(selCol-1+COLS)%COLS; refreshArrows(); refreshHighlights(); break;
-    case'ArrowRight': e.preventDefault(); selCol=(selCol+1)%COLS; refreshArrows(); refreshHighlights(); break;
+    case'ArrowLeft':  e.preventDefault(); selCol=Math.max(0,selCol-1); gnomeTo(selCol,true,null); refreshHighlights(); break;
+    case'ArrowRight': e.preventDefault(); selCol=Math.min(COLS-1,selCol+1); gnomeTo(selCol,true,null); refreshHighlights(); break;
     case'Enter':case' ': e.preventDefault(); placePlayer(selCol); break;
     case'ArrowUp': e.preventDefault(); openMenu(); break;
   }
@@ -429,7 +459,9 @@ function placePlayer(col){
   if(row===-1){shakeCol(col);return;}
   board[row][col]=playerP;
   animDrop(row,col,playerP,()=>{
-    if(!checkEnd(row,col)){curTurn=compP;syncStatus();setTimeout(doComp,250);}
+    if(checkEnd(row,col)){gnomeStone('');return;}
+    const edge=col<3.5?0:6;
+    gnomeTo(edge,true,()=>{selCol=edge;gnomeStone(compColor);curTurn=compP;syncStatus();setTimeout(doComp,250);});
   });
 }
 
@@ -449,10 +481,13 @@ function doComp(){
   busy=true; syncStatus();
   setTimeout(()=>{
     const col=bestMove(),row=freeRow(board,col);
-    board[row][col]=compP;
-    animDrop(row,col,compP,()=>{
-      busy=false;
-      if(!checkEnd(row,col)){curTurn=playerP;syncStatus();}
+    gnomeTo(col,true,()=>{
+      board[row][col]=compP;
+      animDrop(row,col,compP,()=>{
+        if(checkEnd(row,col)){gnomeStone('');busy=false;return;}
+        const edge=col<3.5?0:6;
+        gnomeTo(edge,true,()=>{selCol=edge;gnomeStone(playerColor);busy=false;curTurn=playerP;syncStatus();});
+      });
     });
   },10);
 }
@@ -460,6 +495,9 @@ function doComp(){
 // ── animation (DOM-based positioning → works for any cell size) ──
 function animDrop(row,col,piece,cb){
   busy=true;
+  const gsEl=document.getElementById('gnome-stone');
+  const gsR=gsEl.getBoundingClientRect();
+  gnomeStone('');
   board[row][col]=0; renderStones(); board[row][col]=piece;
   const wrap=document.getElementById('board-wrap');
   const wR=wrap.getBoundingClientRect();
@@ -467,12 +505,13 @@ function animDrop(row,col,piece,cb){
   const tR=cells[row*COLS+col].getBoundingClientRect();
   const x=tR.left-wR.left;
   const endY=tR.top-wR.top;
-  const startY=-(tR.height+16);
+  const startY=gsR.top-wR.top;
+  const origStart=-(tR.height+16);
   const ghost=document.createElement('div');
   ghost.className='ghost stone '+(piece===1?'red':'yellow');
   ghost.style.cssText=`left:${x}px;top:${startY}px`;
   wrap.appendChild(ghost);
-  const dur=(0.07+row*0.045).toFixed(3);
+  const dur=Math.max(0.15,((0.07+row*0.045)*(endY-startY)/(endY-origStart))).toFixed(3);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     ghost.style.transition=`top ${dur}s cubic-bezier(0.2,0.85,0.4,1)`;
     ghost.style.top=endY+'px';
@@ -494,13 +533,13 @@ function checkEnd(row,col){
   if(w){
     over=true;
     const ws=new Set(w.cells.map(([r,c])=>r+','+c));
-    renderStones(ws); refreshArrows();
+    renderStones(ws);
     const pw=w.piece===playerP;
     showResult(pw?'🎉 You Win!':'🤖 Computer Wins!',pw?'#4a90d9':'#e05252');
     return true;
   }
   if(board[0].every(v=>v!==0)){
-    over=true; renderStones(); refreshArrows();
+    over=true; renderStones();
     showResult("🤝 It's a Draw!",'#7a9bb5');
     return true;
   }
@@ -528,6 +567,7 @@ function findWinner(b){
 function showResult(msg,color){
   const el=document.getElementById('res-msg');
   el.textContent=msg; el.style.color=color;
+  document.getElementById('gnome-wrap').style.display='none';
   document.getElementById('result-area').classList.add('show');
   resIdx=0; updResFocus();
 }
