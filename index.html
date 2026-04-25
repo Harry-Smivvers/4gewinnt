@@ -445,12 +445,13 @@ document.addEventListener('keydown',e=>{
   if(onSetup){handleSetupKey(e);return;}
   if(menuOpen){handleMenuKey(e);return;}
   if(over){handleResKey(e);return;}
+  if(e.key==='m'||e.key==='M'){e.preventDefault();goSetup();return;}
   if(busy||curTurn!==playerP) return;
   switch(e.key){
     case'ArrowLeft':  e.preventDefault(); selCol=Math.max(0,selCol-1); gnomeTo(selCol,true,null); refreshHighlights(); break;
     case'ArrowRight': e.preventDefault(); selCol=Math.min(COLS-1,selCol+1); gnomeTo(selCol,true,null); refreshHighlights(); break;
+    case'ArrowDown':
     case'Enter':case' ': e.preventDefault(); placePlayer(selCol); break;
-    case'ArrowUp': e.preventDefault(); openMenu(); break;
   }
 });
 
