@@ -28,30 +28,40 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
   justify-content:flex-start;padding:24px 20px 40px;overflow-y:auto}
 
 /* ── SETUP ── */
-#setup{background:#1b2a3b;border-radius:16px;padding:36px 40px;width:370px;
+#setup{position:relative;background:#1b2a3b;border-radius:16px;padding:20px 28px;width:370px;
   max-width:calc(100vw - 40px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
-@media(max-width:420px){#setup{padding:24px 18px}}
-.splash{width:100%;border-radius:12px;display:block;margin-bottom:16px}
-.title{text-align:center;font-size:1.4rem;font-weight:800;margin-bottom:4px}
-.subtitle{text-align:center;color:#7a9bb5;margin-bottom:32px;font-size:.9rem}
-.sec-label{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
-  color:#7a9bb5;margin-bottom:8px}
-.opt-row{margin-bottom:22px}
-.btn-group{display:flex;gap:10px}
-.cbtn{flex:1;padding:11px 8px;background:#243447;border:2px solid transparent;
-  border-radius:10px;color:#ccc;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .15s}
+#setup-close{position:absolute;top:10px;right:10px;width:30px;height:30px;
+  background:#c0392b;border:none;border-radius:6px;color:#fff;font-size:1rem;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;transition:background .15s;padding:0}
+#setup-close:hover{background:#e74c3c}
+@media(max-width:420px){#setup{padding:14px 14px}}
+.splash{width:70%;border-radius:12px;display:block;margin:0 auto 10px}
+.title{text-align:center;font-size:1.3rem;font-weight:800;margin-bottom:2px}
+.subtitle{text-align:center;color:#7a9bb5;margin-bottom:12px;font-size:.85rem}
+.sec-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  color:#7a9bb5;margin-bottom:5px}
+.opt-row{margin-bottom:10px}
+.btn-group{display:flex;gap:8px}
+.cbtn{flex:1;padding:9px 8px;background:#243447;border:2px solid transparent;
+  border-radius:10px;color:#ccc;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s}
 .cbtn:hover{background:#2d3f54}
 .cbtn.active{background:#1e3a5f;border-color:#4a90d9;color:#fff}
 .cbtn.r.active{border-color:#e05252;color:#ff8080}
 .cbtn.y.active{border-color:#d4a017;color:#ffd700}
 /* keyboard focus ring */
 .kfoc{outline:3px solid #4a90d9 !important;outline-offset:3px}
-.depth-inp{width:100%;padding:11px 14px;background:#243447;border:2px solid #243447;
+.depth-row{display:flex;gap:8px;align-items:center}
+.depth-btn{width:36px;height:36px;flex-shrink:0;background:#243447;border:2px solid #2d3f54;
+  border-radius:8px;color:#e0e0e0;font-size:1.2rem;line-height:1;cursor:pointer;transition:all .15s}
+.depth-btn:hover{background:#2d3f54;border-color:#4a90d9}
+.depth-inp{flex:1;min-width:0;padding:8px 6px;background:#243447;border:2px solid #243447;
   border-radius:10px;color:#fff;font-size:1rem;text-align:center;transition:border-color .15s}
 .depth-inp:focus{outline:none;border-color:#4a90d9}
-.depth-hint{font-size:.72rem;color:#4a6a85;margin-top:5px;text-align:center}
-.go-btn{width:100%;padding:14px;margin-top:6px;background:#1a6abf;border:none;
-  border-radius:10px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;transition:background .15s}
+.depth-hint{font-size:.68rem;color:#4a6a85;margin-top:4px;text-align:center}
+.go-btn{width:100%;padding:12px;margin-bottom:12px;background:#1a6abf;border:none;
+  border-radius:10px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;transition:background .15s;
+  box-shadow:0 3px 12px rgba(26,106,191,.45)}
 .go-btn:hover{background:#2278d0}
 
 /* ── GAME ── */
@@ -125,9 +135,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 
 <!-- SETUP -->
 <div id="setup">
+  <button id="setup-close" onclick="resumeOrStart()" title="Zum Spiel">&#x2715;</button>
   <img class="splash" src="4gwinntSplash.png" alt="">
   <div class="title">4 gewinnt</div>
   <div class="subtitle">Player vs Computer</div>
+
+  <button class="go-btn" id="btn-start" onclick="startGame()">Start New Game &#x25BA;</button>
 
   <div class="opt-row">
     <div class="sec-label">Your Color</div>
@@ -147,17 +160,19 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#0d1b2a;color:#e0e0e
 
   <div class="opt-row">
     <div class="sec-label">Minimax Depth (Difficulty)</div>
-    <input class="depth-inp" id="sd" type="text" value="5"
-           onkeydown="depthKey(event)" oninput="depthSanitize(this)">
+    <div class="depth-row">
+      <button class="depth-btn" id="btn-dminus" onclick="changeDepth(-1)">&#x2212;</button>
+      <input class="depth-inp" id="sd" type="text" value="5"
+             onkeydown="depthKey(event)" oninput="depthSanitize(this)">
+      <button class="depth-btn" id="btn-dplus" onclick="changeDepth(1)">+</button>
+    </div>
     <div class="depth-hint">Higher = stronger AI, slower &nbsp;|&nbsp; Recommended: 1 – 8</div>
   </div>
-
-  <button class="go-btn" id="btn-start" onclick="startGame()">Start Game &#x25BA;</button>
 </div>
 
 <!-- GAME -->
 <div id="game">
-  <button id="goto-menu-btn" onclick="goSetup()">Restart</button>
+  <button id="goto-menu-btn" onclick="goSetup()">Menu</button>
   <div id="status-bar">
     <div class="sstone" id="sstone"></div>
     <span id="stxt">Your turn</span>
@@ -199,10 +214,10 @@ const CORD=[3,2,4,1,5,0,6];
 
 // ── screen state ──
 let onSetup=true;
+let gameStarted=false;
 
 // ── setup keyboard focus ──
-// 'sd' = depth input field (index 4)
-const SETUP_IDS=['btn-red','btn-yellow','btn-you','btn-comp','sd','btn-start'];
+const SETUP_IDS=['btn-start','btn-red','btn-yellow','btn-you','btn-comp','btn-dminus','sd','btn-dplus'];
 const SD_IDX=SETUP_IDS.indexOf('sd');
 let setupIdx=-1;
 let setupEditMode=false;
@@ -272,11 +287,25 @@ function depthSanitize(inp){
   inp.value=inp.value.replace(/\D/g,'');
   if(inp.value.length>1&&inp.value[0]==='0') inp.value=String(parseInt(inp.value,10))||'1';
 }
+function changeDepth(delta){
+  const inp=document.getElementById('sd');
+  inp.value=String(Math.max(1,Math.min(9,readDepth('sd')+delta)));
+}
 function readDepth(id){const v=parseInt(document.getElementById(id).value,10);return isNaN(v)||v<1?1:v;}
 
 // ── start ──
+function resumeOrStart(){
+  if(gameStarted){
+    document.getElementById('setup').style.display='none';
+    document.getElementById('game').style.display='flex';
+    onSetup=false; setupIdx=-1; setupEditMode=false; updSetupFocus();
+  } else {
+    startGame();
+  }
+}
 function startGame(){
   if(setupEditMode) exitSetupEdit(true);
+  gameStarted=true;
   onSetup=false; setupIdx=-1; setupEditMode=false; updSetupFocus();
   depth=readDepth('sd');
   playerColor=_playerColor;
@@ -446,7 +475,7 @@ function handleSetupKey(e){
       updSetupFocus(); break;
     case'Enter':
       e.preventDefault();
-      if(setupIdx<0) break;
+      if(setupIdx<0){startGame();break;}
       if(SETUP_IDS[setupIdx]==='sd') enterSetupEdit();
       else{document.getElementById(SETUP_IDS[setupIdx]).click();updSetupFocus();}
       break;
