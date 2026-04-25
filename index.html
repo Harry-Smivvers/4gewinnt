@@ -208,7 +208,7 @@ const ROWS=6,COLS=7;
 
 // ── game state ──
 let board,playerColor,compColor,playerP,compP,humanFirst,depth;
-let curTurn,selCol,over,busy,menuOpen,mIdx,menuEditMode,gnomePos;
+let curTurn,selCol,over,busy,menuOpen,mIdx,menuEditMode,gnomePos,compMoveCount;
 const MCOUNT=2;
 const CORD=[3,2,4,1,5,0,6];
 
@@ -320,7 +320,7 @@ function startGame(){
 
 function initGame(){
   board=Array.from({length:ROWS},()=>Array(COLS).fill(0));
-  selCol=3; over=false; busy=false; menuOpen=false; mIdx=0;
+  selCol=3; over=false; busy=false; menuOpen=false; mIdx=0; compMoveCount=0;
   curTurn=humanFirst?playerP:compP;
   document.getElementById('result-area').classList.remove('show');
   document.getElementById('gnome-wrap').style.display='';
@@ -517,12 +517,24 @@ function shakeCol(col){
   }
 }
 
+function randomMove(){
+  const open=[];
+  for(let c=0;c<COLS;c++) if(freeRow(board,c)!==-1) open.push(c);
+  return open[Math.floor(Math.random()*open.length)];
+}
+function pickMove(){
+  if(depth===1&&compMoveCount%2===1) return randomMove();
+  if(depth===2&&compMoveCount%3===2) return randomMove();
+  return bestMove();
+}
+
 // ── computer move ──
 function doComp(){
   if(over) return;
   busy=true; syncStatus();
   setTimeout(()=>{
-    const col=bestMove(),row=freeRow(board,col);
+    const col=pickMove(),row=freeRow(board,col);
+    compMoveCount++;
     gnomeTo(col,true,()=>{
       board[row][col]=compP;
       animDrop(row,col,compP,()=>{
@@ -621,7 +633,6 @@ function restartGame(){
   initGame();
 }
 function goSetup(){
-  document.getElementById('result-area').classList.remove('show');
   document.getElementById('game').style.display='none';
   document.getElementById('setup').style.display='block';
   document.getElementById('sd').value=depth;
